@@ -1,0 +1,2 @@
+[console_scripts]
+societyos = societyos.cli:app
