@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from ..db.migrations import run_migrations
+from ..settings import settings
 from .. import __version__
 
 
@@ -36,7 +37,7 @@ app = FastAPI(
 # Allow the frontend (running on a different port locally) to call this API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten this in production
+    allow_origins=settings.cors_allow_origins_list,
     allow_methods=["*"],
     allow_headers=["*"],
 )
