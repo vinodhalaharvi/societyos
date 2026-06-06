@@ -18,3 +18,6 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": __version__}
+
+from .routes.runs import router as runs_router
+app.include_router(runs_router)
