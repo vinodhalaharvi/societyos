@@ -47,3 +47,6 @@ app.add_middleware(
 async def health():
     """Simple liveness check."""
     return {"status": "ok", "version": __version__}
+
+from .routes.runs import router as runs_router
+app.include_router(runs_router)
