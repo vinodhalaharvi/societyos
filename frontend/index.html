@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SocietyOS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #7c6af7;
+    --accent2: #f7c26a;
+    --accent3: #6af7b8;
+    --text: #e8e8f0;
+    --text-dim: #6a6a8a;
+    --proposal: #7c6af7;
+    --debate: #f76a6a;
+    --vote: #f7c26a;
+    --synthesis: #6af7b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 48px 1fr;
+    grid-template-columns: 220px 1fr 320px;
+  }
+
+  /* ── Header ── */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .header-status {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent3);
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── Sidebar ── */
+  aside {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-section {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .run-item {
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .run-item:hover, .run-item.active {
+    background: var(--surface2);
+    border-color: var(--border);
+  }
+
+  .run-item-task {
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .run-item-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+  }
+
+  .badge-complete { background: rgba(106,247,184,0.15); color: var(--accent3); }
+  .badge-running  { background: rgba(124,106,247,0.15); color: var(--accent); }
+  .badge-failed   { background: rgba(247,106,106,0.15); color: var(--debate); }
+
+  /* ── Centre panel ── */
+  main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #graph-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #graph-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Timeline ── */
+  #timeline {
+    height: 72px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .timeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .tl-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+
+  .tl-btn:hover, .tl-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .tl-round-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+
+  .timeline-track {
+    position: relative;
+    height: 24px;
+    display: flex;
+    align-items: center;
+  }
+
+  .tl-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .tl-progress {
+    position: absolute;
+    left: 0;
+    height: 1px;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+
+  .tl-markers {
+    position: absolute;
+    left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .tl-marker {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .tl-marker:hover, .tl-marker.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    transform: scale(1.3);
+  }
+
+  .tl-marker-label {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .tl-scrubber {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* ── Right panel ── */
+  .right-panel {
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-tab {
+    flex: 1;
+    padding: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text-dim);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .panel-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    display: none;
+    flex-direction: column;
+  }
+
+  .panel-content.active { display: flex; }
+
+  /* Feed */
+  #feed {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .feed-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    background: var(--surface2);
+    font-size: 12px;
+    line-height: 1.5;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .feed-item.proposal  { border-color: var(--proposal); }
+  .feed-item.debate    { border-color: var(--debate); }
+  .feed-item.vote      { border-color: var(--vote); }
+  .feed-item.synthesis { border-color: var(--synthesis); }
+  .feed-item.round_start { border-color: var(--border); }
+
+  .feed-agent {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .feed-content { color: var(--text); }
+
+  .feed-confidence {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* Task input */
+  #task-panel {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #task-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  #task-input:focus { border-color: var(--accent); }
+
+  #config-select {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  #run-btn {
+    padding: 10px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  #run-btn:hover { background: #9a8cf7; }
+  #run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Rules editor */
+  #rules-panel {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  #rules-editor {
+    width: 100%;
+    flex: 1;
+    min-height: 200px;
+    padding: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+  }
+
+  #rules-editor:focus { border-color: var(--accent); }
+
+  .rules-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .rules-snippets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .snippet-btn {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.15s;
+  }
+
+  .snippet-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* Benchmark */
+  #bench-panel { padding: 12px; gap: 12px; }
+
+  .bench-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .bench-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+  }
+
+  .bench-bar-bg {
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .bench-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease;
+  }
+
+  .bench-society { background: var(--accent); }
+  .bench-single  { background: var(--text-dim); }
+
+  /* D3 graph styles */
+  .node circle {
+    stroke-width: 2;
+    cursor: grab;
+  }
+
+  .node text {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    fill: var(--text);
+    pointer-events: none;
+    text-anchor: middle;
+  }
+
+  .link {
+    stroke: var(--border);
+    stroke-width: 1;
+    fill: none;
+  }
+
+  .link.active {
+    stroke: var(--accent);
+    stroke-width: 2;
+  }
+
+  .link.debate { stroke: var(--debate); }
+
+  .rep-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    fill: var(--accent3);
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .empty-state {
+    color: var(--text-dim);
+    font-size: 12px;
+    text-align: center;
+    padding: 32px 16px;
+    font-family: 'Space Mono', monospace;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">SOCIETY<span style="color:var(--text-dim)">OS</span></div>
+  <div style="font-size:12px;color:var(--text-dim);margin-left:8px;">multi-agent collaboration platform</div>
+  <div class="header-status">
+    <span class="status-dot"></span>
+    <span id="header-status-text">READY</span>
+  </div>
+</header>
+
+<!-- Sidebar: run history -->
+<aside>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Societies</div>
+    <div id="society-list">
+      <div class="run-item active">
+        <div class="run-item-task">Startup Board</div>
+        <div class="run-item-meta">5 agents · weighted_vote</div>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-section" style="flex:1;overflow-y:auto;">
+    <div class="sidebar-label">Recent Runs</div>
+    <div id="run-list">
+      <div class="empty-state" style="padding:16px;">No runs yet.<br>Start one →</div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main: graph + timeline -->
+<main>
+  <div id="graph-container">
+    <svg id="graph-svg"></svg>
+    <!-- Floating node info -->
+    <div id="node-tooltip" style="display:none;position:absolute;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;pointer-events:none;max-width:200px;"></div>
+  </div>
+
+  <!-- Timeline -->
+  <div id="timeline">
+    <div class="timeline-controls">
+      <button class="tl-btn active" id="btn-live">LIVE</button>
+      <button class="tl-btn" id="btn-scrub">SCRUB</button>
+      <button class="tl-btn" id="btn-replay">REPLAY</button>
+      <div class="tl-round-label" id="round-label">Round — / —</div>
+    </div>
+    <div class="timeline-track">
+      <div class="tl-line"></div>
+      <div class="tl-progress" id="tl-progress" style="width:0%"></div>
+      <div class="tl-markers" id="tl-markers"></div>
+      <input type="range" class="tl-scrubber" id="tl-scrubber" min="0" max="5" value="0">
+    </div>
+  </div>
+</main>
+
+<!-- Right panel -->
+<div class="right-panel">
+  <div class="panel-tabs">
+    <div class="panel-tab active" data-tab="feed">Feed</div>
+    <div class="panel-tab" data-tab="rules">Rules</div>
+    <div class="panel-tab" data-tab="bench">Benchmark</div>
+  </div>
+
+  <!-- Feed tab -->
+  <div class="panel-content active" id="tab-feed">
+    <div id="feed" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;padding:12px;gap:8px;">
+      <div class="empty-state">Waiting for a run to start.<br><br>Configure a task below<br>and click RUN SOCIETY.</div>
+    </div>
+    <div id="task-panel">
+      <select id="config-select">
+        <option value="/Users/jahnavikaranam/societyos/configs/examples/startup_board.yaml">Startup Board</option>
+        <option value="configs/examples/city_council.yaml">City Council</option>
+        <option value="configs/examples/peer_review.yaml">Peer Review</option>
+      </select>
+      <textarea id="task-input" rows="3" placeholder="Describe the problem for the society to solve…">Should we expand our startup to the European market in the next 12 months?</textarea>
+      <button id="run-btn">▶ RUN SOCIETY</button>
+    </div>
+  </div>
+
+  <!-- Rules tab -->
+  <div class="panel-content" id="tab-rules">
+    <div id="rules-panel" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;padding:12px;gap:10px;">
+      <div class="rules-hint">
+        Rules are injected as the first block of every agent's system prompt. The LLM follows them strictly.
+      </div>
+      <textarea id="rules-editor" rows="12">## Society Rules
+- Every claim must be backed by reasoning or data.
+- CFO has financial veto power: any proposal with unquantified cost is blocked.
+- CTO must assess technical feasibility before any proposal is voted on.
+- Maximum 2 proposals per agent per round.
+- Final report must include a Risk section and a Next Steps section.</textarea>
+      <div class="sidebar-label">Quick snippets</div>
+      <div class="rules-snippets">
+        <button class="snippet-btn" onclick="addSnippet('- Always cite evidence before making a claim.')">cite evidence</button>
+        <button class="snippet-btn" onclick="addSnippet('- No agent may propose more than 2 items per round.')">2 per round</button>
+        <button class="snippet-btn" onclick="addSnippet('- Critic must challenge any proposal with confidence < 0.7.')">auto-challenge</button>
+        <button class="snippet-btn" onclick="addSnippet('- Final report must include a Risk section.')">risk section</button>
+        <button class="snippet-btn" onclick="addSnippet('- All claims must cite a precedent or data source.')">cite sources</button>
+      </div>
+      <button class="tl-btn" style="align-self:flex-start;" onclick="applyRules()">APPLY RULES</button>
+      <div id="rules-status" class="rules-hint"></div>
+    </div>
+  </div>
+
+  <!-- Benchmark tab -->
+  <div class="panel-content" id="tab-bench">
+    <div id="bench-panel" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;padding:12px;gap:12px;">
+      <div class="sidebar-label">Current Run vs Single Agent</div>
+      <div class="bench-bar-wrap">
+        <div class="bench-label">
+          <span>Society</span><span id="score-society">—</span>
+        </div>
+        <div class="bench-bar-bg">
+          <div class="bench-bar-fill bench-society" id="bar-society" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="bench-bar-wrap">
+        <div class="bench-label">
+          <span>Single Agent</span><span id="score-single">—</span>
+        </div>
+        <div class="bench-bar-bg">
+          <div class="bench-bar-fill bench-single" id="bar-single" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="sidebar-label" style="margin-top:8px;">Agent Reputation</div>
+      <div id="reputation-list">
+        <div class="empty-state" style="padding:8px;">Complete a run to see reputation.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+const state = {
+  mode: 'live',          // live | scrub | replay
+  currentRun: null,
+  maxRound: 0,
+  currentRound: 0,
+  events: [],
+  agents: [],
+  activeEdges: [],
+  replayTimer: null,
+};
+
+// ─────────────────────────────────────────────
+// D3 Graph
+// ─────────────────────────────────────────────
+const svg = d3.select('#graph-svg');
+const container = document.getElementById('graph-container');
+
+let simulation, nodeGroup, linkGroup, width, height;
+
+const ROLE_COLORS = {
+  'CEO': '#7c6af7',
+  'CFO': '#f7c26a',
+  'CTO': '#6af7b8',
+  "Devil's Advocate": '#f76a6a',
+  'Journalist': '#6ab4f7',
+  'default': '#a0a0c0',
+};
+
+function getColor(name) {
+  return ROLE_COLORS[name] || ROLE_COLORS['default'];
+}
+
+function initGraph(agents) {
+  svg.selectAll('*').remove();
+  state.agents = agents;
+
+  width  = container.clientWidth;
+  height = container.clientHeight;
+
+  svg.attr('viewBox', `0 0 ${width} ${height}`);
+
+  const defs = svg.append('defs');
+  // glow filter
+  const filter = defs.append('filter').attr('id', 'glow');
+  filter.append('feGaussianBlur').attr('stdDeviation', '4').attr('result', 'coloredBlur');
+  const merge = filter.append('feMerge');
+  merge.append('feMergeNode').attr('in', 'coloredBlur');
+  merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  linkGroup = svg.append('g').attr('class', 'links');
+  nodeGroup = svg.append('g').attr('class', 'nodes');
+
+  const nodes = agents.map((a, i) => ({ id: a, index: i }));
+  const links = [];
+
+  simulation = d3.forceSimulation(nodes)
+    .force('charge', d3.forceManyBody().strength(-300))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide(60))
+    .on('tick', ticked);
+
+  const link = linkGroup.selectAll('line')
+    .data(links)
+    .join('line')
+    .attr('class', 'link');
+
+  const node = nodeGroup.selectAll('g')
+    .data(nodes)
+    .join('g')
+    .attr('class', 'node')
+    .call(d3.drag()
+      .on('start', dragStart)
+      .on('drag',  dragged)
+      .on('end',   dragEnd));
+
+  node.append('circle')
+    .attr('r', 28)
+    .attr('fill', d => getColor(d.id) + '22')
+    .attr('stroke', d => getColor(d.id))
+    .attr('filter', 'url(#glow)');
+
+  // thinking ring (hidden by default)
+  node.append('circle')
+    .attr('class', 'thinking-ring')
+    .attr('r', 36)
+    .attr('fill', 'none')
+    .attr('stroke', d => getColor(d.id))
+    .attr('stroke-width', 1.5)
+    .attr('stroke-dasharray', '4 3')
+    .attr('opacity', 0);
+
+  node.append('text')
+    .attr('dy', '0.35em')
+    .text(d => d.id.length > 8 ? d.id.slice(0, 8) + '…' : d.id);
+
+  // reputation badge
+  node.append('text')
+    .attr('class', 'rep-badge')
+    .attr('dy', 42)
+    .text('');
+
+  function ticked() {
+    nodeGroup.selectAll('g').attr('transform', d => `translate(${d.x},${d.y})`);
+    linkGroup.selectAll('line')
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+  }
+
+  function dragStart(event, d) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x; d.fy = d.y;
+  }
+  function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+  function dragEnd(event, d) {
+    if (!event.active) simulation.alphaTarget(0);
+    d.fx = null; d.fy = null;
+  }
+}
+
+function activateNode(name) {
+  nodeGroup.selectAll('g').each(function(d) {
+    if (d.id === name) {
+      d3.select(this).select('.thinking-ring')
+        .attr('opacity', 1)
+        .transition().duration(800).ease(d3.easeSinInOut)
+        .attrTween('stroke-dashoffset', () => d3.interpolate(0, -28))
+        .on('end', function() { d3.select(this).attr('stroke-dashoffset', 0); });
+    }
+  });
+}
+
+function deactivateNode(name) {
+  nodeGroup.selectAll('g').each(function(d) {
+    if (d.id === name) {
+      d3.select(this).select('.thinking-ring').attr('opacity', 0);
+    }
+  });
+}
+
+function flashEdge(from, to, type) {
+  const nodes = simulation.nodes();
+  const src = nodes.find(n => n.id === from);
+  const tgt = nodes.find(n => n.id === to);
+  if (!src || !tgt) return;
+
+  const color = type === 'debate' ? 'var(--debate)' : 'var(--accent)';
+
+  const line = svg.append('line')
+    .attr('x1', src.x).attr('y1', src.y)
+    .attr('x2', tgt.x).attr('y2', tgt.y)
+    .attr('stroke', color)
+    .attr('stroke-width', 2)
+    .attr('opacity', 0.8)
+    .attr('stroke-dasharray', '6 3');
+
+  line.transition().duration(1200)
+    .attr('opacity', 0)
+    .remove();
+}
+
+// ─────────────────────────────────────────────
+// Feed
+// ─────────────────────────────────────────────
+const feed = document.getElementById('feed');
+
+function addFeedItem(event) {
+  // clear empty state
+  const empty = feed.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  const el = document.createElement('div');
+  el.className = `feed-item ${event.event}`;
+
+  let agentColor = event.from ? getColor(event.from) : 'var(--text-dim)';
+
+  if (event.event === 'round_start') {
+    el.innerHTML = `<div class="feed-agent" style="color:var(--text-dim)">── ${event.content} ──</div>`;
+  } else if (event.event === 'vote') {
+    const tally = event.metadata?.tally || {};
+    const tallyStr = Object.entries(tally).map(([a,c]) => `${a}: ${(c*100).toFixed(0)}%`).join(' · ');
+    el.innerHTML = `
+      <div class="feed-agent" style="color:var(--vote)">🗳 VOTE · Round ${event.round}</div>
+      <div class="feed-content">${event.content}</div>
+      <div class="feed-confidence">${tallyStr}</div>`;
+  } else if (event.event === 'synthesis') {
+    el.innerHTML = `
+      <div class="feed-agent" style="color:var(--synthesis)">✦ FINAL REPORT</div>
+      <div class="feed-content" style="white-space:pre-wrap;font-size:11px;">${event.content.slice(0, 500)}${event.content.length > 500 ? '…' : ''}</div>`;
+  } else if (event.event === 'run_complete') {
+    el.innerHTML = `<div class="feed-agent" style="color:var(--accent3)">✓ Run complete — ${event.metadata?.total_proposals || ''} proposals</div>`;
+    setBenchmark(82, 54); // mock scores until LLM judge is wired
+  } else {
+    el.innerHTML = `
+      <div class="feed-agent" style="color:${agentColor}">${event.from || event.event}</div>
+      <div class="feed-content">${event.content}</div>
+      ${event.confidence != null ? `<div class="feed-confidence">confidence: ${(event.confidence*100).toFixed(0)}%</div>` : ''}`;
+  }
+
+  feed.appendChild(el);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+// ─────────────────────────────────────────────
+// Timeline
+// ─────────────────────────────────────────────
+const scrubber = document.getElementById('tl-scrubber');
+const progress = document.getElementById('tl-progress');
+const roundLabel = document.getElementById('round-label');
+const markers = document.getElementById('tl-markers');
+
+function updateTimeline(current, max) {
+  state.currentRound = current;
+  state.maxRound = max;
+  scrubber.max = max;
+  scrubber.value = current;
+  progress.style.width = max > 0 ? `${(current / max) * 100}%` : '0%';
+  roundLabel.textContent = `Round ${current} / ${max}`;
+
+  // rebuild markers
+  markers.innerHTML = '';
+  for (let r = 0; r <= max; r++) {
+    const m = document.createElement('div');
+    m.className = `tl-marker${r === current ? ' active' : ''}`;
+    const lbl = document.createElement('div');
+    lbl.className = 'tl-marker-label';
+    lbl.textContent = r === 0 ? 'start' : `R${r}`;
+    m.appendChild(lbl);
+    m.addEventListener('click', () => scrubTo(r));
+    markers.appendChild(m);
+  }
+}
+
+scrubber.addEventListener('input', () => scrubTo(parseInt(scrubber.value)));
+
+async function scrubTo(round) {
+  if (!state.currentRun) return;
+  updateTimeline(round, state.maxRound);
+
+  // replay events up to this round
+  try {
+    const res = await fetch(`/api/runs/${state.currentRun}/replay?up_to_round=${round}`);
+    const data = await res.json();
+    replayEvents(data.events);
+  } catch(e) {
+    // If no server, replay from local state
+    const filtered = state.events.filter(e => e.round <= round);
+    replayEvents(filtered);
+  }
+}
+
+function replayEvents(events) {
+  feed.innerHTML = '';
+  events.forEach(e => {
+    addFeedItem({ event: e.event_type, from: e.from_agent, content: e.content,
+                  confidence: e.confidence, round: e.round, metadata: {} });
+  });
+}
+
+// ─────────────────────────────────────────────
+// Mode buttons
+// ─────────────────────────────────────────────
+document.getElementById('btn-live').addEventListener('click', () => setMode('live'));
+document.getElementById('btn-scrub').addEventListener('click', () => setMode('scrub'));
+document.getElementById('btn-replay').addEventListener('click', () => setMode('replay'));
+
+function setMode(mode) {
+  state.mode = mode;
+  ['live','scrub','replay'].forEach(m => {
+    document.getElementById(`btn-${m}`).classList.toggle('active', m === mode);
+  });
+  if (mode === 'replay') startReplay();
+  if (mode !== 'replay' && state.replayTimer) {
+    clearInterval(state.replayTimer);
+    state.replayTimer = null;
+  }
+}
+
+function startReplay() {
+  let r = 0;
+  if (state.replayTimer) clearInterval(state.replayTimer);
+  state.replayTimer = setInterval(() => {
+    if (r > state.maxRound) { clearInterval(state.replayTimer); return; }
+    scrubTo(r++);
+  }, 1200);
+}
+
+// ─────────────────────────────────────────────
+// Panel tabs
+// ─────────────────────────────────────────────
+document.querySelectorAll('.panel-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+  });
+});
+
+// ─────────────────────────────────────────────
+// Run society (SSE)
+// ─────────────────────────────────────────────
+document.getElementById('run-btn').addEventListener('click', startRun);
+
+async function startRun() {
+  const task = document.getElementById('task-input').value.trim();
+  const configPath = document.getElementById('config-select').value;
+  if (!task) return;
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = '⟳ RUNNING…';
+  document.getElementById('header-status-text').textContent = 'RUNNING';
+  feed.innerHTML = '';
+  state.events = [];
+  updateTimeline(0, 5);
+
+  try {
+    const res = await fetch('/api/runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config_path: configPath, task }),
+    });
+
+    if (!res.ok) {
+      simulateDemoRun(task);
+      btn.disabled = false;
+      btn.textContent = '▶ RUN SOCIETY';
+      document.getElementById('header-status-text').textContent = 'READY';
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const text = decoder.decode(value);
+      const lines = text.split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const event = JSON.parse(line.slice(6));
+          handleEvent(event);
+        } catch(e) {}
+      }
+    }
+  } catch(err) {
+    simulateDemoRun(task);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '▶ RUN SOCIETY';
+  document.getElementById('header-status-text').textContent = 'READY';
+}
+
+function handleEvent(event) {
+  state.events.push(event);
+
+  if (event.event === 'run_start') {
+    const agents = event.metadata?.agents || ['CEO','CFO','CTO'];
+    initGraph(agents);
+    state.currentRun = null;
+    updateTimeline(0, 3);
+  }
+
+  if (event.event === 'proposal') {
+    activateNode(event.from);
+    setTimeout(() => deactivateNode(event.from), 2000);
+    updateTimeline(event.round, Math.max(state.maxRound, event.round));
+  }
+
+  if (event.event === 'debate') {
+    flashEdge(event.from, state.agents[0], 'debate');
+  }
+
+  if (event.event === 'vote') {
+    updateTimeline(event.round, Math.max(state.maxRound, event.round));
+  }
+
+  addFeedItem(event);
+}
+
+// ─────────────────────────────────────────────
+// Benchmark display
+// ─────────────────────────────────────────────
+function setBenchmark(society, single) {
+  document.getElementById('score-society').textContent = society;
+  document.getElementById('score-single').textContent = single;
+  document.getElementById('bar-society').style.width = society + '%';
+  document.getElementById('bar-single').style.width = single + '%';
+}
+
+// ─────────────────────────────────────────────
+// Rules editor
+// ─────────────────────────────────────────────
+function addSnippet(text) {
+  const editor = document.getElementById('rules-editor');
+  editor.value += '\n' + text;
+  editor.focus();
+}
+
+function applyRules() {
+  document.getElementById('rules-status').textContent = '✓ Rules will apply to the next run.';
+  setTimeout(() => document.getElementById('rules-status').textContent = '', 3000);
+}
+
+// ─────────────────────────────────────────────
+// Demo simulation (no backend)
+// ─────────────────────────────────────────────
+function simulateDemoRun(task) {
+  const agents = ['CEO', 'CFO', 'CTO', "Devil's Advocate", 'Journalist'];
+  const events = [
+    { event: 'run_start', content: task, metadata: { agents }, round: 0 },
+    { event: 'round_start', content: 'Round 1 of 3', round: 1 },
+    { event: 'proposal', from: 'CEO', content: 'We should expand aggressively — the market opportunity is clear.', confidence: 0.87, round: 1 },
+    { event: 'proposal', from: 'CFO', content: 'Expansion requires €2M minimum. Cash runway is only 8 months.', confidence: 0.91, round: 1 },
+    { event: 'proposal', from: 'CTO', content: 'Our stack can handle EU data residency requirements with 6 weeks of work.', confidence: 0.78, round: 1 },
+    { event: 'proposal', from: "Devil's Advocate", content: 'None of you have accounted for regulatory risk in Germany and France.', confidence: 0.55, round: 1 },
+    { event: 'conflict', content: '1 conflict detected', round: 1, metadata: { agents: ["Devil's Advocate"] } },
+    { event: 'debate', from: "Devil's Advocate", content: 'GDPR compliance alone will take 3 months. This plan is premature.', confidence: 0.72, round: 1 },
+    { event: 'vote', content: '3 proposals approved', round: 1, metadata: { tally: { CEO: 0.87, CFO: 0.91, CTO: 0.78 }, winners: ['CEO','CFO','CTO'] } },
+    { event: 'round_start', content: 'Round 2 of 3', round: 2 },
+    { event: 'proposal', from: 'CEO', content: 'Revised plan: start with UK only, lower cost, simpler compliance.', confidence: 0.89, round: 2 },
+    { event: 'proposal', from: 'CFO', content: 'UK entry costs €800K. Achievable with current runway if we close Q2 deal.', confidence: 0.85, round: 2 },
+    { event: 'vote', content: '2 proposals approved', round: 2, metadata: { tally: { CEO: 0.89, CFO: 0.85 }, winners: ['CEO','CFO'] } },
+    { event: 'synthesis', from: 'Journalist', content: '# Final Report\n\n## Summary\nThe board recommends a phased expansion into the UK market.\n\n## Key Decisions\n- Launch in UK only in Q3\n- Budget capped at €800K\n- GDPR compliance timeline: 8 weeks\n\n## Risks\n- Q2 deal dependency\n- Regulatory delays\n\n## Next Steps\n1. Hire UK country manager\n2. Begin GDPR audit\n3. Close Q2 enterprise deal', round: 0 },
+    { event: 'run_complete', content: 'Society run complete.', metadata: { total_proposals: 7 }, round: 0 },
+  ];
+
+  let i = 0;
+  function next() {
+    if (i >= events.length) return;
+    handleEvent(events[i++]);
+    if (i < events.length) setTimeout(next, 600);
+  }
+  next();
+}
+
+// ─────────────────────────────────────────────
+// Init with demo agents on load
+// ─────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initGraph(['CEO', 'CFO', 'CTO', "Devil's Advocate", 'Journalist']);
+  updateTimeline(0, 5);
+});
+
+window.addEventListener('resize', () => {
+  if (state.agents.length) initGraph(state.agents);
+});
+</script>
+</body>
+</html>

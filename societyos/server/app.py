@@ -10,13 +10,17 @@ Endpoints so far (PR #1 — foundation):
 More endpoints are added in later PRs.
 """
 
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+from fastapi.staticfiles import StaticFiles
 
+from .. import __version__
 from ..db.migrations import run_migrations
 from ..settings import settings
-from .. import __version__
+from .routes.runs import router as runs_router
 
 
 @asynccontextmanager
@@ -48,5 +52,9 @@ async def health():
     """Simple liveness check."""
     return {"status": "ok", "version": __version__}
 
-from .routes.runs import router as runs_router
+
 app.include_router(runs_router)
+
+_frontend = Path(__file__).parent.parent.parent / "frontend"
+if _frontend.exists():
+    app.mount("/", StaticFiles(directory=str(_frontend), html=True), name="frontend")

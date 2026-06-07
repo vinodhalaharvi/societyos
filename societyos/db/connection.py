@@ -8,8 +8,11 @@ WAL (Write-Ahead Logging) mode is enabled so that:
 """
 
 from __future__ import annotations
-import aiosqlite
+
 from pathlib import Path
+
+import aiosqlite
+
 from ..settings import settings
 
 
@@ -22,7 +25,7 @@ async def get_connection() -> aiosqlite.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     conn = await aiosqlite.connect(str(db_path))
-    conn.row_factory = aiosqlite.Row          # rows behave like dicts
+    conn.row_factory = aiosqlite.Row  # rows behave like dicts
     await conn.execute("PRAGMA journal_mode=WAL")
     await conn.execute("PRAGMA foreign_keys=ON")
     return conn
