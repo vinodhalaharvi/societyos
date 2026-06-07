@@ -1,5 +1,6 @@
 from pathlib import Path
 import sqlite3
+
 from ..settings import settings
 
 TABLES = [
@@ -36,6 +37,7 @@ TABLES = [
         UNIQUE(society_id, agent_name)
     )""",
 ]
+
 
 async def run_migrations() -> None:
     """Use synchronous sqlite3 for migrations — avoids aiosqlite thread issues on Python 3.14."""

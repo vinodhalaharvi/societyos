@@ -1,7 +1,7 @@
 society:
   name: "Startup Board"
   decision_strategy: weighted_vote
-  max_rounds: 3
+  max_rounds: 5
   benchmark_vs_single_agent: true
   synthesizer: "Journalist"
 
@@ -53,6 +53,8 @@ rules: |
 tools:
   web_search:
     enabled: true
+    options:
+      provider: duckduckgo
   calculator:
     enabled: true
 

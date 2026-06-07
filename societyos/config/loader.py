@@ -11,8 +11,10 @@ def load_config(path: str | Path) -> SocietyConfig:
     data: dict = yaml.safe_load(raw)
     if not isinstance(data, dict):
         raise ValueError(f"Config file must be a YAML mapping, got {type(data)}")
+
     society_block = data.pop("society", {})
     data.update(society_block)
+
     try:
         return SocietyConfig(**data)
     except Exception as exc:

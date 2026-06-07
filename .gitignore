@@ -1,7 +1,26 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Secrets — NEVER commit these
+.env
+
+# App data
 *.db
 *.db-shm
 *.db-wal
-__pycache__/
-*.pyc
+reports/*.md
+reports/*.json
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store

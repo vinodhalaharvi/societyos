@@ -1,30 +1,59 @@
+"""
+FastAPI application.
+
+Start with:
+    uvicorn societyos.server.app:app --reload --port 8000
+
+Endpoints so far (PR #1 — foundation):
+    GET /health  →  {"status": "ok", "version": "0.1.0"}
+
+More endpoints are added in later PRs.
+"""
+
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+from fastapi.staticfiles import StaticFiles
+
+from .. import __version__
 from ..db.migrations import run_migrations
-from importlib.metadata import version
-__version__ = version("societyos")
+from ..settings import settings
+from .routes.runs import router as runs_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Runs once on startup: migrate the database."""
     await run_migrations()
-    yield
+    yield  # app runs here
+    # (cleanup on shutdown goes after yield)
 
 
-app = FastAPI(title="SocietyOS", version=__version__, lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app = FastAPI(
+    title="SocietyOS",
+    description="Multi-agent collaboration platform",
+    version=__version__,
+    lifespan=lifespan,
+)
+
+# Allow the frontend (running on a different port locally) to call this API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allow_origins_list,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
 async def health():
+    """Simple liveness check."""
     return {"status": "ok", "version": __version__}
 
-from .routes.runs import router as runs_router
-app.include_router(runs_router)
 
-from fastapi.staticfiles import StaticFiles
-from pathlib import Path
+app.include_router(runs_router)
 
 _frontend = Path(__file__).parent.parent.parent / "frontend"
 if _frontend.exists():
