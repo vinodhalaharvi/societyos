@@ -54,7 +54,6 @@ def validate(
     table.add_column("Memory")
     table.add_column("Tools")
     table.add_column("Weight")
-
     for agent in cfg.agents:
         table.add_row(
             agent.name,
